@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaveChart - Realtime Example</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #fff; font-family: sans-serif; }
+    #chart { width: 100vw; height: 90vh; }
+    .info { padding: 12px; font-size: 13px; color: #888; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <div class="info">Simulated real-time data: new bar every 2 seconds, last bar updates every 500ms</div>
+
+  <script src="../../dist/index.global.js"></script>
+  <script>
+    // Generate initial historical data
+    function generateData(count) {
+      const bars = [];
+      let price = 100;
+      const baseTime = Math.floor(Date.now() / 1000) - count * 60;
+
+      for (let i = 0; i < count; i++) {
+        const change = (Math.random() - 0.48) * 2;
+        const open = price;
+        const close = price + change;
+        const high = Math.max(open, close) + Math.random() * 1.5;
+        const low = Math.min(open, close) - Math.random() * 1.5;
+        const volume = Math.random() * 500000 + 200000;
+
+        bars.push({
+          time: baseTime + i * 60,
+          open: Math.round(open * 100) / 100,
+          high: Math.round(high * 100) / 100,
+          low: Math.round(low * 100) / 100,
+          close: Math.round(close * 100) / 100,
+          volume: Math.round(volume),
+        });
+
+        price = close;
+      }
+      return bars;
+    }
+
+    const chart = new WaveChart.Chart(document.getElementById('chart'));
+    const data = generateData(200);
+    chart.setData(data);
+    chart.addSeries('volume');
+
+    let lastBar = data[data.length - 1];
+    let currentPrice = lastBar.close;
+
+    // Simulate tick updates (last bar)
+    setInterval(() => {
+      const tick = (Math.random() - 0.5) * 0.5;
+      currentPrice += tick;
+      const updated = {
+        close: Math.round(currentPrice * 100) / 100,
+        high: Math.max(lastBar.high, currentPrice),
+        low: Math.min(lastBar.low, currentPrice),
+      };
+      lastBar.close = updated.close;
+      lastBar.high = updated.high;
+      lastBar.low = updated.low;
+      chart.updateBar(updated);
+    }, 500);
+
+    // Simulate new bar every 2 seconds
+    setInterval(() => {
+      const newTime = lastBar.time + 60;
+      const open = currentPrice;
+      const change = (Math.random() - 0.48) * 2;
+      const close = open + change;
+      currentPrice = close;
+
+      const newBar = {
+        time: newTime,
+        open: Math.round(open * 100) / 100,
+        high: Math.round(Math.max(open, close) * 100) / 100,
+        low: Math.round(Math.min(open, close) * 100) / 100,
+        close: Math.round(close * 100) / 100,
+        volume: Math.round(Math.random() * 500000 + 200000),
+      };
+
+      chart.appendBar(newBar);
+      lastBar = newBar;
+    }, 2000);
+  </script>
+</body>
+</html>
