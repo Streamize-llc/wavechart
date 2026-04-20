@@ -20,7 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "prepare": "tsup"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
