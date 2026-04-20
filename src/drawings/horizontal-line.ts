@@ -1,11 +1,24 @@
 import { Drawing, type DataAnchor } from './drawing';
 import type { TimeScale } from '../layout/time-scale';
 import type { PriceScale } from '../layout/price-scale';
+import { dashPattern } from '../utils/shapes';
 
-/** Horizontal price level line */
+/** Horizontal price level line. Supports Pine hline / line-style semantics. */
 export class HorizontalLineDrawing extends Drawing {
-  constructor(id: string, price: number, color?: string, lineWidth?: number) {
+  style: string = 'solid';     // 'solid' | 'dotted' | 'dashed'
+  label?: string;
+
+  constructor(
+    id: string,
+    price: number,
+    color?: string,
+    lineWidth?: number,
+    style?: string,
+    label?: string,
+  ) {
     super(id, [{ barIndex: 0, price }], color, lineWidth);
+    if (style) this.style = style;
+    if (label) this.label = label;
   }
 
   get price(): number { return this.anchors[0].price; }
@@ -17,17 +30,20 @@ export class HorizontalLineDrawing extends Drawing {
     ctx.save();
     ctx.strokeStyle = this.color;
     ctx.lineWidth = this.lineWidth;
+    const dash = dashPattern(this.style, this.lineWidth);
+    if (dash.length) ctx.setLineDash(dash);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(paneWidth, y);
     ctx.stroke();
+    ctx.setLineDash([]);
 
-    // Price label
     ctx.fillStyle = this.color;
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(this.price.toFixed(2), paneWidth - 4, y - 2);
+    const text = this.label ?? this.price.toFixed(2);
+    ctx.fillText(text, paneWidth - 4, y - 2);
 
     ctx.restore();
   }

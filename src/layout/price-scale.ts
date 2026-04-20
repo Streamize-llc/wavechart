@@ -102,7 +102,9 @@ export class PriceScale {
 
   /** Generate nice tick values for the axis */
   getTicks(maxTicks?: number): number[] {
-    const max = maxTicks ?? Math.floor(this._height / 50);
+    // Ensure at least 3 candidate slots so short panes (e.g. 140px oscillator)
+    // still produce visible labels.
+    const max = maxTicks ?? Math.max(3, Math.floor(this._height / 40));
     return generateTicks(this._priceMin, this._priceMax, max);
   }
 }

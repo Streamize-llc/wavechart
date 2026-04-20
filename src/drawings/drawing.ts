@@ -79,4 +79,15 @@ export abstract class Drawing {
   }
 }
 
-export type DrawingType = 'trendline' | 'horizontal-line' | 'vertical-line' | 'ray' | 'fibonacci' | 'rectangle' | 'text';
+export type DrawingType =
+  | 'trendline'
+  | 'horizontal-line'
+  | 'vertical-line'
+  | 'ray'
+  | 'fibonacci'
+  | 'rectangle'
+  | 'text'
+  | 'label'
+  | 'box'
+  | 'polyline'
+  | 'linefill';

@@ -644,17 +644,16 @@ export class Chart {
     }
   }
 
-  private _renderPriceAxis(visibleRange: VisibleRange): void {
+  private _renderPriceAxis(_visibleRange: VisibleRange): void {
     this._priceAxisCanvas.clear();
     const ctx = this._priceAxisCanvas.ctx;
     const rect = this._layout.priceScaleRect;
-    const ps = this._mainPane.priceScale;
 
     // Background
     ctx.fillStyle = this._theme.background;
     ctx.fillRect(0, 0, rect.width, rect.height);
 
-    // Border
+    // Left border
     ctx.strokeStyle = this._theme.priceScale.borderColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -662,32 +661,50 @@ export class Chart {
     ctx.lineTo(0.5, rect.height);
     ctx.stroke();
 
-    // Labels
+    // Labels — one set per pane, mapped into axis-canvas coordinates.
     ctx.fillStyle = this._theme.priceScale.textColor;
     ctx.font = `${this._theme.fontSize}px ${this._theme.fontFamily}`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
 
-    const ticks = ps.getTicks();
-    for (const price of ticks) {
-      const y = ps.priceToY(price);
-      if (y >= 0 && y <= this._mainPane.rect.height) {
+    for (const pane of this._layout.panes) {
+      const ps = pane.priceScale;
+      const paneTop = pane.rect.y;
+      const paneBottom = paneTop + pane.rect.height;
+
+      // Pane separator (above every non-first pane)
+      if (pane !== this._mainPane) {
+        ctx.strokeStyle = this._theme.priceScale.borderColor;
+        ctx.beginPath();
+        ctx.moveTo(0, Math.round(paneTop) + 0.5);
+        ctx.lineTo(rect.width, Math.round(paneTop) + 0.5);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = this._theme.priceScale.textColor;
+      const ticks = ps.getTicks();
+      for (const price of ticks) {
+        const localY = ps.priceToY(price);
+        if (localY < 4 || localY > pane.rect.height - 4) continue;
+        const canvasY = paneTop + localY;
+        if (canvasY < 4 || canvasY > paneBottom - 4) continue;
         ctx.fillText(
           formatPrice(price, this._pricePrecision),
           rect.width - 8,
-          y
+          canvasY,
         );
       }
     }
 
-    // Current price tag (last close)
+    // Current price tag (last close) — main pane only.
     if (this._store.length > 0) {
+      const ps = this._mainPane.priceScale;
       const lastClose = this._store.close[this._store.length - 1];
       const lastOpen = this._store.open[this._store.length - 1];
       const isBull = lastClose >= lastOpen;
-      const tagY = ps.priceToY(lastClose);
+      const tagY = this._mainPane.rect.y + ps.priceToY(lastClose);
 
-      if (tagY >= 0 && tagY <= this._mainPane.rect.height) {
+      if (tagY >= 0 && tagY <= this._mainPane.rect.y + this._mainPane.rect.height) {
         const text = formatPrice(lastClose, this._pricePrecision);
         const textWidth = ctx.measureText(text).width;
         const tagH = 18;

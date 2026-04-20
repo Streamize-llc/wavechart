@@ -1,13 +1,16 @@
 import type { Renderer, RenderContext } from '../renderers/renderer';
 import type { DrawingType, DataAnchor } from './drawing';
 import { Drawing } from './drawing';
-import { TrendlineDrawing } from './trendline';
+import { TrendlineDrawing, type TrendlineStyle, type TrendlineExtend } from './trendline';
 import { HorizontalLineDrawing } from './horizontal-line';
 import { VerticalLineDrawing } from './vertical-line';
 import { RayDrawing } from './ray';
 import { FibonacciDrawing } from './fibonacci';
 import { RectangleDrawing } from './rectangle';
 import { TextDrawing } from './text';
+import { LabelDrawing, type LabelOptions } from './label';
+import { BoxDrawing, type BoxOptions } from './box';
+import { PolylineDrawing, type PolylineOptions } from './polyline';
 
 interface UndoAction {
   type: 'add' | 'remove' | 'move';
@@ -48,6 +51,12 @@ export class DrawingManager implements Renderer {
     text?: string;
     color?: string;
     lineWidth?: number;
+    // Pine style extras:
+    style?: string;
+    extend?: string;
+    label?: LabelOptions;
+    box?: BoxOptions;
+    polyline?: PolylineOptions;
   }): Drawing {
     const id = `drawing_${this._nextId++}`;
     let drawing: Drawing;
@@ -58,11 +67,16 @@ export class DrawingManager implements Renderer {
           id,
           options.points as [DataAnchor, DataAnchor],
           options.color,
-          options.lineWidth
+          options.lineWidth,
+          options.style as TrendlineStyle,
+          options.extend as TrendlineExtend,
         );
         break;
       case 'horizontal-line':
-        drawing = new HorizontalLineDrawing(id, options.price ?? 0, options.color, options.lineWidth);
+        drawing = new HorizontalLineDrawing(
+          id, options.price ?? 0, options.color, options.lineWidth,
+          options.style, options.text,
+        );
         break;
       case 'vertical-line':
         drawing = new VerticalLineDrawing(id, options.barIndex ?? 0, options.color, options.lineWidth);
@@ -89,6 +103,25 @@ export class DrawingManager implements Renderer {
           options.color
         );
         break;
+      case 'label':
+        drawing = new LabelDrawing(
+          id,
+          options.points?.[0] ?? { barIndex: options.barIndex ?? 0, price: options.price ?? 0 },
+          { text: options.text, ...(options.label ?? {}) },
+        );
+        break;
+      case 'box':
+        drawing = new BoxDrawing(
+          id,
+          options.points as [DataAnchor, DataAnchor],
+          options.box ?? {},
+        );
+        break;
+      case 'polyline':
+        drawing = new PolylineDrawing(id, options.points ?? [], options.polyline ?? {});
+        break;
+      case 'linefill':
+        throw new Error('linefill is rendered as a FillBetweenRenderer, not a Drawing');
       default:
         throw new Error(`Unknown drawing type: ${type}`);
     }
@@ -214,12 +247,17 @@ export class DrawingManager implements Renderer {
       case 'horizontal-line':
       case 'vertical-line':
       case 'text':
+      case 'label':
         return 1;
       case 'trendline':
       case 'ray':
       case 'fibonacci':
       case 'rectangle':
+      case 'box':
         return 2;
+      case 'polyline':
+      case 'linefill':
+        return 2; // polyline needs N; manager opens interactive creation after 2 clicks
       default:
         return 2;
     }
