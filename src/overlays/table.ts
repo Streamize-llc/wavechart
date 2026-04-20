@@ -38,16 +38,23 @@ export interface TableSpec {
   cells: TableCellSpec[];
 }
 
+// Insets clear the chart's right-side price axis (~56px) and bottom time axis
+// (~28px) so tables don't overlap axis labels. These are conservative defaults
+// for the typical right-aligned price scale layout.
+const AXIS_RIGHT = 56;
+const AXIS_BOTTOM = 28;
+const EDGE_PAD = 8;
+
 const POSITION_STYLES: Record<TablePosition, Partial<CSSStyleDeclaration>> = {
-  top_left:      { top: '4px',    left: '4px',    transform: '' },
-  top_center:    { top: '4px',    left: '50%',    transform: 'translateX(-50%)' },
-  top_right:     { top: '4px',    right: '4px',   transform: '' },
-  middle_left:   { top: '50%',    left: '4px',    transform: 'translateY(-50%)' },
-  middle_center: { top: '50%',    left: '50%',    transform: 'translate(-50%, -50%)' },
-  middle_right:  { top: '50%',    right: '4px',   transform: 'translateY(-50%)' },
-  bottom_left:   { bottom: '4px', left: '4px',    transform: '' },
-  bottom_center: { bottom: '4px', left: '50%',    transform: 'translateX(-50%)' },
-  bottom_right:  { bottom: '4px', right: '4px',   transform: '' },
+  top_left:      { top: `${EDGE_PAD}px`, left: `${EDGE_PAD}px`, transform: '' },
+  top_center:    { top: `${EDGE_PAD}px`, left: '50%',           transform: 'translateX(-50%)' },
+  top_right:     { top: `${EDGE_PAD}px`, right: `${AXIS_RIGHT}px`, transform: '' },
+  middle_left:   { top: '50%',           left: `${EDGE_PAD}px`, transform: 'translateY(-50%)' },
+  middle_center: { top: '50%',           left: '50%',           transform: 'translate(-50%, -50%)' },
+  middle_right:  { top: '50%',           right: `${AXIS_RIGHT}px`, transform: 'translateY(-50%)' },
+  bottom_left:   { bottom: `${AXIS_BOTTOM}px`, left: `${EDGE_PAD}px`, transform: '' },
+  bottom_center: { bottom: `${AXIS_BOTTOM}px`, left: '50%',           transform: 'translateX(-50%)' },
+  bottom_right:  { bottom: `${AXIS_BOTTOM}px`, right: `${AXIS_RIGHT}px`, transform: '' },
 };
 
 const TEXT_SIZES: Record<string, string> = {
@@ -131,11 +138,17 @@ export class TableOverlay {
     Object.assign(el.style, pos);
 
     el.style.borderCollapse = 'collapse';
-    el.style.background = spec.bgcolor || 'transparent';
+    // Default a slightly opaque dark background so cells without explicit
+    // bgcolor remain readable against busy chart backgrounds.
+    el.style.background = spec.bgcolor || 'rgba(13, 12, 11, 0.85)';
+    el.style.backdropFilter = 'blur(2px)';
+    (el.style as any).webkitBackdropFilter = 'blur(2px)';
     el.style.border = spec.frameWidth && spec.frameColor
-      ? `${spec.frameWidth}px solid ${spec.frameColor}` : '';
+      ? `${spec.frameWidth}px solid ${spec.frameColor}`
+      : '1px solid rgba(255,255,255,0.08)';
     el.style.font = `12px sans-serif`;
     el.style.color = '#FFFFFF';
+    el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.35)';
 
     // Rebuild the cell grid — simpler than diffing.
     while (el.firstChild) el.removeChild(el.firstChild);

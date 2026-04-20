@@ -73,19 +73,70 @@ export class ShapeSeriesRenderer implements Renderer {
         }
       }
 
+      const shape = opts.shape ?? 'cross';
+      const isLabelShape =
+        shape === 'labelup' ||
+        shape === 'labeldown' ||
+        shape === 'label_up' ||
+        shape === 'label_down' ||
+        shape === 'label_left' ||
+        shape === 'label_right' ||
+        shape === 'label_center';
+
       if (opts.char) {
         ctx.fillStyle = color;
         ctx.fillText(opts.char, barX, anchorY);
-      } else {
-        drawShape(ctx, opts.shape ?? 'cross', barX, anchorY, px, color);
-      }
-
-      if (opts.text) {
-        ctx.fillStyle = opts.textcolor ?? color;
-        const textY = loc === 'belowbar' ? anchorY + px : anchorY - px;
-        ctx.font = `${Math.max(10, px * 0.8)}px sans-serif`;
-        ctx.fillText(opts.text, barX, textY);
+      } else if (isLabelShape) {
+        // Pine label-shape: colored balloon with optional text inside.
+        // Without a balloon background the text would render against the
+        // chart background — invisible when textcolor approaches the bg.
+        const textPx = Math.max(10, px * 0.8);
+        const labelText = opts.text ?? '';
+        ctx.font = `${textPx}px sans-serif`;
+        const textW = labelText
+          ? ctx.measureText(labelText).width
+          : px * 1.2;
+        const padX = 6;
+        const padY = 4;
+        const boxW = textW + padX * 2;
+        const boxH = textPx + padY * 2;
+        // Anchor the balloon so its tip points at the bar.
+        const isUp = shape === 'labelup' || shape === 'label_up';
+        const tipH = px * 0.5;
+        const boxTop =
+          isUp ? anchorY + tipH : anchorY - boxH - tipH;
+        const boxLeft = barX - boxW / 2;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        // Balloon body
+        ctx.rect(boxLeft, boxTop, boxW, boxH);
+        // Balloon tip (small triangle pointing toward the bar)
+        if (isUp) {
+          ctx.moveTo(barX - tipH * 0.5, boxTop);
+          ctx.lineTo(barX, anchorY);
+          ctx.lineTo(barX + tipH * 0.5, boxTop);
+        } else {
+          const tipBase = boxTop + boxH;
+          ctx.moveTo(barX - tipH * 0.5, tipBase);
+          ctx.lineTo(barX, anchorY);
+          ctx.lineTo(barX + tipH * 0.5, tipBase);
+        }
+        ctx.closePath();
+        ctx.fill();
+        if (labelText) {
+          ctx.fillStyle = opts.textcolor ?? '#000';
+          ctx.fillText(labelText, barX, boxTop + boxH / 2);
+        }
         ctx.font = `${px}px sans-serif`;
+      } else {
+        drawShape(ctx, shape, barX, anchorY, px, color);
+        if (opts.text) {
+          ctx.fillStyle = opts.textcolor ?? color;
+          const textY = loc === 'belowbar' ? anchorY + px : anchorY - px;
+          ctx.font = `${Math.max(10, px * 0.8)}px sans-serif`;
+          ctx.fillText(opts.text, barX, textY);
+          ctx.font = `${px}px sans-serif`;
+        }
       }
     }
 
